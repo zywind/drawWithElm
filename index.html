@@ -1,0 +1,235 @@
+<!DOCTYPE HTML>
+<html><head><meta charset="UTF-8"><title>main</title><script type="text/javascript" src="/usr/local/share/elm/compiler/elm-runtime.js"></script><script type="text/javascript">Elm.Main = Elm.Main || {};
+Elm.Main.make = function (_elm) {
+   "use strict";
+   _elm.Main = _elm.Main || {};
+   if (_elm.Main.values)
+   return _elm.Main.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   _A = _N.Array.make(_elm),
+   _E = _N.Error.make(_elm),
+   $moduleName = "Main",
+   $Basics = Elm.Basics.make(_elm),
+   $Color = Elm.Color.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Graphics$Collage = Elm.Graphics.Collage.make(_elm),
+   $Graphics$Element = Elm.Graphics.Element.make(_elm),
+   $Graphics$Input = Elm.Graphics.Input.make(_elm),
+   $Keyboard = Elm.Keyboard.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Mouse = Elm.Mouse.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var processMousePress = F2(function (mpressed,
+   canvas) {
+      return function () {
+         var _v0 = canvas.freePoint;
+         switch (_v0.ctor)
+         {case "Just":
+            return mpressed && ($List.isEmpty(canvas.currentPath) || !_U.eq(_v0._0,
+              $List.last(canvas.currentPath))) ? canvas.drawing ? function () {
+                 var _v2 = canvas.selectedTool;
+                 switch (_v2.ctor)
+                 {case "Line":
+                    return _U.replace([["currentPath"
+                                       ,_L.append(canvas.currentPath,
+                                       _L.fromArray([_v0._0]))]],
+                      canvas);
+                    case "Nil": return canvas;}
+                 _E.Case($moduleName,
+                 "between lines 96 and 99");
+              }() : function () {
+                 var _v3 = canvas.selectedTool;
+                 switch (_v3.ctor)
+                 {case "Line":
+                    return _U.replace([["drawing"
+                                       ,true]
+                                      ,["currentPath"
+                                       ,_L.append(canvas.currentPath,
+                                       _L.fromArray([_v0._0]))]],
+                      canvas);
+                    case "Nil": return canvas;}
+                 _E.Case($moduleName,
+                 "between lines 100 and 105");
+              }() : canvas;
+            case "Nothing": return canvas;}
+         _E.Case($moduleName,
+         "between lines 91 and 106");
+      }();
+   });
+   var updateTool = F2(function (tool,
+   canvas) {
+      return _U.replace([["selectedTool"
+                         ,tool]],
+      canvas);
+   });
+   var processKey = F2(function (keys,
+   canvas) {
+      return A2($List.any,
+      function (k) {
+         return _U.eq(k,27);
+      },
+      keys) ? function () {
+         var _v4 = canvas.currentPath;
+         switch (_v4.ctor)
+         {case "[]":
+            return _U.replace([["drawing"
+                               ,false]],
+              canvas);}
+         return _U.replace([["drawing"
+                            ,false]
+                           ,["forms"
+                            ,_L.append(canvas.forms,
+                            _L.fromArray([$Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath))]))]
+                           ,["currentPath"
+                            ,_L.fromArray([])]],
+         canvas);
+      }() : canvas;
+   });
+   var drawPath = function (canvas) {
+      return function () {
+         var _v5 = canvas.freePoint;
+         switch (_v5.ctor)
+         {case "Just":
+            return canvas.drawing ? $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(_L.append(canvas.currentPath,
+              _L.fromArray([_v5._0])))) : $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath));
+            case "Nothing":
+            return $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath));}
+         _E.Case($moduleName,
+         "between lines 50 and 55");
+      }();
+   };
+   var canvas_height = 400;
+   var canvas_width = 600;
+   var xoffset = 100;
+   var transformPos = function (_v7) {
+      return function () {
+         switch (_v7.ctor)
+         {case "_Tuple2":
+            return function () {
+                 var newy = $Basics.toFloat((canvas_height / 2 | 0) - _v7._1);
+                 var newx = $Basics.toFloat(_v7._0 - (canvas_width / 2 | 0) - xoffset);
+                 return _U.cmp($Basics.abs(newx),
+                 $Basics.toFloat(canvas_width / 2 | 0)) < 1 && _U.cmp($Basics.abs(newy),
+                 $Basics.toFloat(canvas_height / 2 | 0)) < 1 ? $Maybe.Just({ctor: "_Tuple2"
+                                                                           ,_0: newx
+                                                                           ,_1: newy}) : $Maybe.Nothing;
+              }();}
+         _E.Case($moduleName,
+         "between lines 41 and 46");
+      }();
+   };
+   var processMousePos = F2(function (mpos,
+   canvas) {
+      return _U.replace([["freePoint"
+                         ,transformPos(mpos)]],
+      canvas);
+   });
+   var computeState = F2(function (_v11,
+   canvas) {
+      return function () {
+         switch (_v11.ctor)
+         {case "_Tuple4":
+            return processMousePress(_v11._2)(processMousePos(_v11._3)(updateTool(_v11._1)(A2(processKey,
+              _v11._0,
+              canvas))));}
+         _E.Case($moduleName,
+         "between lines 110 and 113");
+      }();
+   });
+   var Nil = {ctor: "Nil"};
+   var toolbox = $Graphics$Input.input(Nil);
+   var allInput = A5($Signal.lift4,
+   F4(function (v0,v1,v2,v3) {
+      return {ctor: "_Tuple4"
+             ,_0: v0
+             ,_1: v1
+             ,_2: v2
+             ,_3: v3};
+   }),
+   $Keyboard.keysDown,
+   toolbox.signal,
+   $Mouse.isDown,
+   $Mouse.position);
+   var Line = {ctor: "Line"};
+   var lineTool = A3($Graphics$Input.button,
+   toolbox.handle,
+   Line,
+   "line");
+   var sketchpad = function (canvas) {
+      return function () {
+         var _ = A2($Debug.watch,
+         "canvas",
+         canvas);
+         return A2($Graphics$Element.flow,
+         $Graphics$Element.outward,
+         _L.fromArray([A2($Graphics$Element.flow,
+                      $Graphics$Element.down,
+                      _L.fromArray([lineTool]))
+                      ,A3($Graphics$Element.container,
+                      canvas_width + xoffset,
+                      canvas_height,
+                      A2($Graphics$Element.topLeftAt,
+                      $Graphics$Element.absolute(xoffset),
+                      $Graphics$Element.absolute(0)))(A3($Graphics$Collage.collage,
+                      canvas_width,
+                      canvas_height,
+                      _L.append(_L.fromArray([$Graphics$Collage.filled($Color.lightGray)(A2($Graphics$Collage.rect,
+                                             canvas_width,
+                                             canvas_height))
+                                             ,$Graphics$Collage.outlined($Graphics$Collage.solid($Color.black))(A2($Graphics$Collage.rect,
+                                             canvas_width,
+                                             canvas_height))
+                                             ,drawPath(canvas)]),
+                      canvas.forms)))]));
+      }();
+   };
+   var canvasState = {_: {}
+                     ,currentPath: _L.fromArray([])
+                     ,drawing: false
+                     ,forms: _L.fromArray([])
+                     ,freePoint: $Maybe.Nothing
+                     ,selectedTool: Nil};
+   var main = A2($Signal._op["<~"],
+   sketchpad,
+   A3($Signal.foldp,
+   computeState,
+   canvasState,
+   allInput));
+   var CanvasState = F5(function (a,
+   b,
+   c,
+   d,
+   e) {
+      return {_: {}
+             ,currentPath: b
+             ,drawing: e
+             ,forms: a
+             ,freePoint: c
+             ,selectedTool: d};
+   });
+   _elm.Main.values = {_op: _op
+                      ,CanvasState: CanvasState
+                      ,canvasState: canvasState
+                      ,Line: Line
+                      ,Nil: Nil
+                      ,toolbox: toolbox
+                      ,xoffset: xoffset
+                      ,canvas_width: canvas_width
+                      ,canvas_height: canvas_height
+                      ,lineTool: lineTool
+                      ,transformPos: transformPos
+                      ,drawPath: drawPath
+                      ,sketchpad: sketchpad
+                      ,processKey: processKey
+                      ,updateTool: updateTool
+                      ,processMousePos: processMousePos
+                      ,processMousePress: processMousePress
+                      ,computeState: computeState
+                      ,allInput: allInput
+                      ,main: main};
+   return _elm.Main.values;
+};</script></head><body><script type="text/javascript">Elm.fullscreen(Elm.Main)</script><noscript></noscript></body></html>
