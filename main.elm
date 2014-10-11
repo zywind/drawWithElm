@@ -1,117 +1,258 @@
 import Mouse
 import Debug
-import Char
-import Keyboard (KeyCode, keysDown)
-import Graphics.Collage (Form)
+import Char (toCode)
+import History
+import Keyboard
+import Window
+import Graphics.Collage (Form, LineStyle)
 import Graphics.Input (input, button, Input)
 
 type CanvasState =
-  { forms: [Form]
-  , currentPath: [(Float, Float)]
-  , freePoint: Maybe (Float, Float)
+  { drawings: [Drawing]
+  , selectedDrawingIndex: Maybe Int
+  , tempPoints: [(Float, Float)]
   , selectedTool: Tool
-  , drawing: Bool
+  , selectedLineStyle: LineStyle
+  , selectedFill: Color
+  , ragionStyle: RagionStyle
+  , isDrawing: Bool
+  , history: History.History [Drawing]
   }
 canvasState : CanvasState
 canvasState =
-  { forms = []
-  , currentPath = []
-  , freePoint = Nothing
-  , selectedTool = Nil
-  , drawing = False
+  { drawings = []
+  , selectedDrawingIndex = Nothing
+  , tempPoints = []
+  , selectedTool = LinePen
+  , selectedLineStyle = defaultLine
+  , selectedFill = white
+  , ragionStyle = PathOnly
+  , isDrawing = False
+  , history = History.infinite
   }
 
-data Tool = Line | Nil
+data RagionStyle = PathOnly | FillOnly | PathAndFill
+data Tool = LinePen | OvalPen | PolygonPen | RectPen
+data Action = Select Tool | Clear | NoAction | Click (Float, Float) | DoubleClick | Cancel | Undo | Redo
+data Drawing =
+  Rect (Float, Float) (Float, Float) LineStyle Color RagionStyle |
+  Oval (Float, Float) (Float, Float) LineStyle Color RagionStyle |
+  Polygon [(Float, Float)] LineStyle Color RagionStyle |
+  Path [(Float, Float)] LineStyle
 
-toolbox : Input Tool
-toolbox = input Nil
+canvas_width = 800
+canvas_height = 600
+xoffsetS = lift (\w -> if w > canvas_width then (w-canvas_width) // 2 else 0) Window.width
+yoffsetS = lift (\h -> if h > canvas_height then (h-canvas_height) // 2 else 0) Window.height
 
-xoffset = 100
-canvas_width = 600
-canvas_height = 400
+toolbox : Input Action
+toolbox = input NoAction
 
-lineTool : Element
-lineTool = button toolbox.handle Line "line"
+lineBtn : Element
+lineBtn = button toolbox.handle (Select LinePen) "Line"
 
---polygonTool : Element
---polygonTool = plainText "polygon" |> clickable toolbox.handle Polygon
+ovalBtn : Element
+ovalBtn = button toolbox.handle (Select OvalPen) "Oval"
 
-transformPos: (Int, Int) -> Maybe (Float, Float)
-transformPos (x, y) = 
-  let newx = x - canvas_width // 2 - xoffset |> toFloat
-      newy = canvas_height // 2 - y |> toFloat
-  in
-    if abs newx <= (canvas_width // 2 |> toFloat) && abs newy <= (canvas_height // 2 |> toFloat)
-      then Just (newx, newy)
-      else Nothing
+rectBtn : Element
+rectBtn = button toolbox.handle (Select RectPen) "Rectangle"
 
-drawPath: CanvasState -> Form
-drawPath canvas =
-  case canvas.freePoint of
-    Just pos ->
-      if canvas.drawing
-        then path (canvas.currentPath ++ [pos]) |> traced (solid black)
-        else path canvas.currentPath |> traced (solid black)
-    Nothing -> path canvas.currentPath |> traced (solid black)
+clearBtn : Element
+clearBtn = button toolbox.handle (Clear) "Clear"
 
-sketchpad : CanvasState -> Element
-sketchpad canvas =
-  let _=Debug.watch "canvas" canvas
-  in
-  flow outward [
-    flow down [lineTool],
-    container (canvas_width+xoffset) canvas_height (topLeftAt (absolute xoffset) (absolute 0)) <|
-    collage canvas_width canvas_height
-    ([rect canvas_width canvas_height |> filled lightGray
-    , rect canvas_width canvas_height |> outlined (solid black)
-    , drawPath canvas
-    ] ++ canvas.forms)
-  ]
+activeTool selectedTool =
+  case selectedTool of
+    LinePen -> [color red lineBtn, ovalBtn, rectBtn]
+    OvalPen -> [lineBtn, color red ovalBtn, rectBtn]
+    RectPen -> [lineBtn, ovalBtn, color red rectBtn]
 
-processKey : [KeyCode] -> CanvasState -> CanvasState
-processKey keys canvas =
-  if | any (\k->k==27) keys -> 
-        case canvas.currentPath of
-          [] -> {canvas | drawing <- False}
-          xs -> {canvas | drawing <- False
-                        , forms <- canvas.forms ++ [path canvas.currentPath |> traced (solid black)]
-                        , currentPath <- []}
-     --| any (\k->k==76) keys -> {canvas | selectedTool <- Line} --L
-     --| any (\k->k==78) keys -> {canvas | selectedTool <- Nil} --N
-     | otherwise -> canvas
+draw: Drawing -> Form
+draw drawing =
+  case drawing of
+    Path points lineStyle ->
+      path points |> traced lineStyle
+    Oval a b lineStyle fillColor ragionStyle ->
+      let
+        w = fst b - fst a
+        h = snd b - snd a
+        center = (fst a + w / 2, snd a + h / 2)
+        outline = oval w h |> outlined lineStyle |> move center
+        fill = oval w h |> filled red |> move center
+      in
+        case ragionStyle of
+          PathOnly -> outline
+          FillOnly -> fill
+          PathAndFill -> group [fill, outline]
+    Rect a b lineStyle fillColor ragionStyle ->
+      let
+        w = fst b - fst a
+        h = snd b - snd a
+        center = (fst a + w / 2, snd a + h / 2)
+        outline = rect w h |> outlined lineStyle |> move center
+        fill = rect w h |> filled red |> move center
+      in
+        case ragionStyle of
+          PathOnly -> outline
+          FillOnly -> fill
+          PathAndFill -> group [fill, outline]
 
-updateTool : Tool -> CanvasState -> CanvasState
-updateTool tool canvas = {canvas | selectedTool <- tool}
+showHints canvas =
+  case canvas.selectedTool of
+    LinePen ->
+      if not <| isEmpty canvas.tempPoints
+        then plainText "Double click to end the path."
+        else plainText ""
+    _ -> plainText ""
 
-processMousePos : (Int, Int) -> CanvasState -> CanvasState
-processMousePos mpos canvas = {canvas | freePoint <- transformPos mpos}
+createPath points canvas = Path points canvas.selectedLineStyle
+createRect a b canvas = Rect a b canvas.selectedLineStyle canvas.selectedFill canvas.ragionStyle
+createOval a b canvas = Oval a b canvas.selectedLineStyle canvas.selectedFill canvas.ragionStyle
 
-processMousePress : Bool -> CanvasState -> CanvasState
-processMousePress mpressed canvas =
-  case canvas.freePoint of 
-    Just pos ->
-      if mpressed && (isEmpty canvas.currentPath || pos /= last canvas.currentPath)
-        then if canvas.drawing
+sketchpad : CanvasState -> (Float, Float) -> Int -> Int -> Int -> Int -> Element
+sketchpad canvas mpos w h xoffset yoffset =
+  let _ = Debug.watch "canvas" canvas
+      newDrawing =
+        if canvas.isDrawing
           then
             case canvas.selectedTool of
-              Line -> {canvas | currentPath <- canvas.currentPath ++ [pos]}
-              Nil -> canvas
-          else
-            case canvas.selectedTool of
-              Line -> {canvas | 
-                          drawing <- True, 
-                          currentPath <- canvas.currentPath ++ [pos]}
-              Nil -> canvas
+              LinePen -> [createPath (canvas.tempPoints ++ [mpos]) canvas]
+              OvalPen -> [createOval (head canvas.tempPoints) mpos canvas]
+              RectPen -> [createRect (head canvas.tempPoints) mpos canvas]
+          else []
+  in
+  container w h (topLeftAt (absolute <| xoffset - 100) (absolute yoffset)) <|
+    flow down
+    [ flow right
+      [ flow down (activeTool canvas.selectedTool ++ [spacer 20 20, clearBtn])
+      , collage canvas_width canvas_height
+          ([rect canvas_width canvas_height |> filled lightGray
+          , rect canvas_width canvas_height |> outlined (solid black)
+          ] ++ (map draw (canvas.drawings ++ newDrawing)))
+      , flow down
+        [ plainText "Undo: Ctrl-Z"
+        , plainText "Redo: Ctrl-R"
+        , spacer 10 10
+        , plainText "Line: L"
+        , plainText "Oval: O"
+        , plainText "Rect: R"
+        , spacer 10 10
+        , showHints canvas
+        ]
+      ]
+    ]
+
+processKey : Bool -> Bool -> [Keyboard.KeyCode] -> Action
+processKey ctrl shift keys =
+  if | any (\k->k==27) keys -> Cancel
+     | ctrl && shift && any (\k->k==toCode 'Z') keys || ctrl && any (\k->k==toCode 'R') keys -> Redo
+     | ctrl && any (\k->k==toCode 'Z') keys -> Undo
+     | any (\k->k==toCode 'L') keys -> Select LinePen
+     | any (\k->k==toCode 'O') keys -> Select OvalPen
+     | any (\k->k==toCode 'R') keys -> Select RectPen
+     | otherwise -> NoAction
+
+clearCurrentDrawing canvas = {canvas | tempPoints <- [], isDrawing <- False}
+clearPreviousDrawing canvas = {canvas | drawings <- [], history <- History.add [] canvas.history}
+
+processAction : Action -> CanvasState -> CanvasState
+processAction action canvas = 
+  case Debug.watch "action" action of
+    Select tool ->
+      if tool /= canvas.selectedTool
+        then {canvas | selectedTool <- tool, tempPoints <- [], isDrawing <- False}
         else canvas
-    Nothing -> canvas
+    Cancel -> clearCurrentDrawing canvas
+    Clear -> clearCurrentDrawing canvas |> clearPreviousDrawing
+    NoAction -> canvas
+    Click mpos -> 
+      if canvas.isDrawing
+        then
+          if mpos /= last canvas.tempPoints
+            then
+              case canvas.selectedTool of
+                LinePen -> {canvas | tempPoints <- canvas.tempPoints ++ [mpos]}
+                OvalPen ->
+                  let
+                    newDrawing = createOval (head canvas.tempPoints) mpos canvas
+                  in
+                    {canvas | drawings <- canvas.drawings ++ [newDrawing],
+                              tempPoints <- [], isDrawing <- False,
+                              history <- History.add (canvas.drawings ++ [newDrawing]) canvas.history}
+                RectPen ->
+                  let
+                    newDrawing = createRect (head canvas.tempPoints) mpos canvas
+                  in
+                    {canvas | drawings <- canvas.drawings ++ [newDrawing],
+                              tempPoints <- [], isDrawing <- False,
+                              history <- History.add (canvas.drawings ++ [newDrawing]) canvas.history}
+            else
+              canvas
+        else
+          {canvas | isDrawing <- True, tempPoints <- [mpos]}
+    DoubleClick ->
+      if canvas.isDrawing && canvas.selectedTool == LinePen
+        then
+          let
+            newPath = createPath canvas.tempPoints canvas
+          in
+            {canvas | drawings <- canvas.drawings ++ [newPath], tempPoints <- [], 
+                      isDrawing <- False, history <- History.add (canvas.drawings ++ [newPath]) canvas.history}
+        else
+          canvas
+    Undo ->
+      case History.undo canvas.history of
+        Nothing -> canvas
+        Just h ->
+          case History.value h of
+            Nothing -> { canvas | drawings <- [], history <- h}
+            Just s -> { canvas | drawings <- s, history <- h}
+    Redo ->
+      case History.redo canvas.history of
+        Nothing -> canvas
+        Just h ->
+          case History.value h of
+            Nothing -> canvas
+            Just s -> { canvas | drawings <- s, history <- h}
 
-computeState : ([KeyCode], Tool, Bool, (Int, Int)) -> CanvasState -> CanvasState
-computeState (keys, tool, mpressed, mpos) canvas =
-  processKey keys canvas |>
-  updateTool tool |>
-  processMousePos mpos |>
-  processMousePress mpressed
+transformPosition: (Int, Int) -> Int -> Int -> (Float, Float)
+transformPosition (x, y) xoffset yoffset = 
+  let newx = x - canvas_width // 2 - xoffset |> toFloat
+      newy = canvas_height // 2 - y + yoffset |> toFloat
+  in (newx, newy)
 
-allInput = lift4 (,,,) keysDown toolbox.signal Mouse.isDown Mouse.position
 
-main = sketchpad <~ foldp computeState canvasState allInput
+inCanvas : Int -> Int -> (Int, Int) -> Bool
+inCanvas xoffset yoffset (x, y) =
+     x >= xoffset && x <= xoffset + canvas_width
+  && y >= yoffset && y <= yoffset + canvas_height
+
+filteredMouseClicks = 
+  let
+    inCanvasClicks = keepWhen (inCanvas <~ xoffsetS ~ yoffsetS ~ Mouse.position) () Mouse.clicks
+    clickAction : (Int, Int) -> Int -> Int -> Action
+    clickAction = (\(x, y) xoffset yoffset -> Click (transformPosition (x, y) xoffset yoffset))
+  in clickAction <~ (sampleOn inCanvasClicks Mouse.position) ~ xoffsetS ~ yoffsetS
+
+doubleClick : Signal ()
+doubleClick =
+  let
+      calcInterval (t, _) (interval, lastT) = ((t-lastT), t)
+      intervals: Signal (Time, Time)
+      intervals = foldp calcInterval (10000.0, 0.0) (timestamp Mouse.clicks)
+      shortIntervals: Signal (Time, Time)
+      shortIntervals = keepIf (\(interval, _) -> interval < 200) (10000.0, 0.0) intervals
+  in sampleOn shortIntervals (constant ())
+
+doubleClickAction =
+  let inCanvasDoubleClick = keepWhen (inCanvas <~ xoffsetS ~ yoffsetS ~ Mouse.position) () doubleClick
+  in sampleOn inCanvasDoubleClick (constant DoubleClick)
+
+allInput : Signal Action
+allInput = merges [
+  toolbox.signal
+  , processKey <~ (merge Keyboard.meta Keyboard.ctrl) ~ Keyboard.shift ~ Keyboard.keysDown
+  , doubleClickAction, filteredMouseClicks
+  ]
+
+main = sketchpad <~ foldp processAction canvasState allInput ~ 
+  (transformPosition <~ Mouse.position ~ xoffsetS ~ yoffsetS) ~ Window.width ~ Window.height ~ xoffsetS ~ yoffsetS
