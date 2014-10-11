@@ -13,168 +13,417 @@ Elm.Main.make = function (_elm) {
    _E = _N.Error.make(_elm),
    $moduleName = "Main",
    $Basics = Elm.Basics.make(_elm),
+   $Char = Elm.Char.make(_elm),
    $Color = Elm.Color.make(_elm),
    $Debug = Elm.Debug.make(_elm),
    $Graphics$Collage = Elm.Graphics.Collage.make(_elm),
    $Graphics$Element = Elm.Graphics.Element.make(_elm),
    $Graphics$Input = Elm.Graphics.Input.make(_elm),
+   $History = Elm.History.make(_elm),
    $Keyboard = Elm.Keyboard.make(_elm),
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Mouse = Elm.Mouse.make(_elm),
-   $Signal = Elm.Signal.make(_elm);
-   var processMousePress = F2(function (mpressed,
-   canvas) {
-      return function () {
-         var _v0 = canvas.freePoint;
-         switch (_v0.ctor)
-         {case "Just":
-            return mpressed && ($List.isEmpty(canvas.currentPath) || !_U.eq(_v0._0,
-              $List.last(canvas.currentPath))) ? canvas.drawing ? function () {
-                 var _v2 = canvas.selectedTool;
-                 switch (_v2.ctor)
-                 {case "Line":
-                    return _U.replace([["currentPath"
-                                       ,_L.append(canvas.currentPath,
-                                       _L.fromArray([_v0._0]))]],
-                      canvas);
-                    case "Nil": return canvas;}
-                 _E.Case($moduleName,
-                 "between lines 96 and 99");
-              }() : function () {
-                 var _v3 = canvas.selectedTool;
-                 switch (_v3.ctor)
-                 {case "Line":
-                    return _U.replace([["drawing"
-                                       ,true]
-                                      ,["currentPath"
-                                       ,_L.append(canvas.currentPath,
-                                       _L.fromArray([_v0._0]))]],
-                      canvas);
-                    case "Nil": return canvas;}
-                 _E.Case($moduleName,
-                 "between lines 100 and 105");
-              }() : canvas;
-            case "Nothing": return canvas;}
-         _E.Case($moduleName,
-         "between lines 91 and 106");
-      }();
-   });
-   var updateTool = F2(function (tool,
-   canvas) {
-      return _U.replace([["selectedTool"
-                         ,tool]],
-      canvas);
-   });
-   var processKey = F2(function (keys,
-   canvas) {
-      return A2($List.any,
-      function (k) {
-         return _U.eq(k,27);
+   $Signal = Elm.Signal.make(_elm),
+   $Text = Elm.Text.make(_elm),
+   $Time = Elm.Time.make(_elm),
+   $Window = Elm.Window.make(_elm);
+   var doubleClick = function () {
+      var calcInterval = F2(function (_v0,
+      _v1) {
+         return function () {
+            switch (_v1.ctor)
+            {case "_Tuple2":
+               return function () {
+                    switch (_v0.ctor)
+                    {case "_Tuple2":
+                       return {ctor: "_Tuple2"
+                              ,_0: _v0._0 - _v1._1
+                              ,_1: _v0._0};}
+                    _E.Case($moduleName,
+                    "on line 239, column 48 to 60");
+                 }();}
+            _E.Case($moduleName,
+            "on line 239, column 48 to 60");
+         }();
+      });
+      var intervals = A3($Signal.foldp,
+      calcInterval,
+      {ctor: "_Tuple2"
+      ,_0: 10000.0
+      ,_1: 0.0},
+      $Time.timestamp($Mouse.clicks));
+      var shortIntervals = A3($Signal.keepIf,
+      function (_v8) {
+         return function () {
+            switch (_v8.ctor)
+            {case "_Tuple2":
+               return _U.cmp(_v8._0,200) < 0;}
+            _E.Case($moduleName,
+            "on line 243, column 50 to 64");
+         }();
       },
-      keys) ? function () {
-         var _v4 = canvas.currentPath;
-         switch (_v4.ctor)
-         {case "[]":
-            return _U.replace([["drawing"
-                               ,false]],
-              canvas);}
-         return _U.replace([["drawing"
-                            ,false]
-                           ,["forms"
-                            ,_L.append(canvas.forms,
-                            _L.fromArray([$Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath))]))]
-                           ,["currentPath"
-                            ,_L.fromArray([])]],
-         canvas);
-      }() : canvas;
-   });
-   var drawPath = function (canvas) {
+      {ctor: "_Tuple2"
+      ,_0: 10000.0
+      ,_1: 0.0},
+      intervals);
+      return A2($Signal.sampleOn,
+      shortIntervals,
+      $Signal.constant({ctor: "_Tuple0"}));
+   }();
+   var clearPreviousDrawing = function (canvas) {
+      return _U.replace([["drawings"
+                         ,_L.fromArray([])]
+                        ,["history"
+                         ,A2($History.add,
+                         _L.fromArray([]),
+                         canvas.history)]],
+      canvas);
+   };
+   var clearCurrentDrawing = function (canvas) {
+      return _U.replace([["tempPoints"
+                         ,_L.fromArray([])]
+                        ,["isDrawing",false]],
+      canvas);
+   };
+   var showHints = function (canvas) {
       return function () {
-         var _v5 = canvas.freePoint;
-         switch (_v5.ctor)
-         {case "Just":
-            return canvas.drawing ? $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(_L.append(canvas.currentPath,
-              _L.fromArray([_v5._0])))) : $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath));
-            case "Nothing":
-            return $Graphics$Collage.traced($Graphics$Collage.solid($Color.black))($Graphics$Collage.path(canvas.currentPath));}
-         _E.Case($moduleName,
-         "between lines 50 and 55");
+         var _v12 = canvas.selectedTool;
+         switch (_v12.ctor)
+         {case "LinePen":
+            return $Basics.not($List.isEmpty(canvas.tempPoints)) ? $Text.plainText("Double click to end the path.") : $Text.plainText("");}
+         return $Text.plainText("");
       }();
    };
-   var canvas_height = 400;
-   var canvas_width = 600;
-   var xoffset = 100;
-   var transformPos = function (_v7) {
+   var draw = function (drawing) {
       return function () {
-         switch (_v7.ctor)
-         {case "_Tuple2":
+         switch (drawing.ctor)
+         {case "Oval":
             return function () {
-                 var newy = $Basics.toFloat((canvas_height / 2 | 0) - _v7._1);
-                 var newx = $Basics.toFloat(_v7._0 - (canvas_width / 2 | 0) - xoffset);
-                 return _U.cmp($Basics.abs(newx),
-                 $Basics.toFloat(canvas_width / 2 | 0)) < 1 && _U.cmp($Basics.abs(newy),
-                 $Basics.toFloat(canvas_height / 2 | 0)) < 1 ? $Maybe.Just({ctor: "_Tuple2"
-                                                                           ,_0: newx
-                                                                           ,_1: newy}) : $Maybe.Nothing;
+                 var h = $Basics.snd(drawing._1) - $Basics.snd(drawing._0);
+                 var w = $Basics.fst(drawing._1) - $Basics.fst(drawing._0);
+                 var center = {ctor: "_Tuple2"
+                              ,_0: $Basics.fst(drawing._0) + w / 2
+                              ,_1: $Basics.snd(drawing._0) + h / 2};
+                 var outline = $Graphics$Collage.move(center)($Graphics$Collage.outlined(drawing._2)(A2($Graphics$Collage.oval,
+                 w,
+                 h)));
+                 var fill = $Graphics$Collage.move(center)($Graphics$Collage.filled($Color.red)(A2($Graphics$Collage.oval,
+                 w,
+                 h)));
+                 return function () {
+                    switch (drawing._4.ctor)
+                    {case "FillOnly": return fill;
+                       case "PathAndFill":
+                       return $Graphics$Collage.group(_L.fromArray([fill
+                                                                   ,outline]));
+                       case "PathOnly":
+                       return outline;}
+                    _E.Case($moduleName,
+                    "between lines 82 and 86");
+                 }();
+              }();
+            case "Path":
+            return $Graphics$Collage.traced(drawing._1)($Graphics$Collage.path(drawing._0));
+            case "Rect":
+            return function () {
+                 var h = $Basics.snd(drawing._1) - $Basics.snd(drawing._0);
+                 var w = $Basics.fst(drawing._1) - $Basics.fst(drawing._0);
+                 var center = {ctor: "_Tuple2"
+                              ,_0: $Basics.fst(drawing._0) + w / 2
+                              ,_1: $Basics.snd(drawing._0) + h / 2};
+                 var outline = $Graphics$Collage.move(center)($Graphics$Collage.outlined(drawing._2)(A2($Graphics$Collage.rect,
+                 w,
+                 h)));
+                 var fill = $Graphics$Collage.move(center)($Graphics$Collage.filled($Color.red)(A2($Graphics$Collage.rect,
+                 w,
+                 h)));
+                 return function () {
+                    switch (drawing._4.ctor)
+                    {case "FillOnly": return fill;
+                       case "PathAndFill":
+                       return $Graphics$Collage.group(_L.fromArray([fill
+                                                                   ,outline]));
+                       case "PathOnly":
+                       return outline;}
+                    _E.Case($moduleName,
+                    "between lines 94 and 97");
+                 }();
               }();}
          _E.Case($moduleName,
-         "between lines 41 and 46");
+         "between lines 71 and 97");
       }();
    };
-   var processMousePos = F2(function (mpos,
-   canvas) {
-      return _U.replace([["freePoint"
-                         ,transformPos(mpos)]],
-      canvas);
-   });
-   var computeState = F2(function (_v11,
-   canvas) {
+   var canvas_height = 600;
+   var yoffsetS = A2($Signal.lift,
+   function (h) {
+      return _U.cmp(h,
+      canvas_height) > 0 ? (h - canvas_height) / 2 | 0 : 0;
+   },
+   $Window.height);
+   var canvas_width = 800;
+   var xoffsetS = A2($Signal.lift,
+   function (w) {
+      return _U.cmp(w,
+      canvas_width) > 0 ? (w - canvas_width) / 2 | 0 : 0;
+   },
+   $Window.width);
+   var transformPosition = F3(function (_v28,
+   xoffset,
+   yoffset) {
       return function () {
-         switch (_v11.ctor)
-         {case "_Tuple4":
-            return processMousePress(_v11._2)(processMousePos(_v11._3)(updateTool(_v11._1)(A2(processKey,
-              _v11._0,
-              canvas))));}
+         switch (_v28.ctor)
+         {case "_Tuple2":
+            return function () {
+                 var newy = $Basics.toFloat((canvas_height / 2 | 0) - _v28._1 + yoffset);
+                 var newx = $Basics.toFloat(_v28._0 - (canvas_width / 2 | 0) - xoffset);
+                 return {ctor: "_Tuple2"
+                        ,_0: newx
+                        ,_1: newy};
+              }();}
          _E.Case($moduleName,
-         "between lines 110 and 113");
+         "between lines 219 and 221");
       }();
    });
-   var Nil = {ctor: "Nil"};
-   var toolbox = $Graphics$Input.input(Nil);
-   var allInput = A5($Signal.lift4,
-   F4(function (v0,v1,v2,v3) {
-      return {ctor: "_Tuple4"
-             ,_0: v0
-             ,_1: v1
-             ,_2: v2
-             ,_3: v3};
-   }),
-   $Keyboard.keysDown,
-   toolbox.signal,
-   $Mouse.isDown,
-   $Mouse.position);
-   var Line = {ctor: "Line"};
-   var lineTool = A3($Graphics$Input.button,
-   toolbox.handle,
-   Line,
-   "line");
-   var sketchpad = function (canvas) {
+   var inCanvas = F3(function (xoffset,
+   yoffset,
+   _v32) {
       return function () {
+         switch (_v32.ctor)
+         {case "_Tuple2":
+            return _U.cmp(_v32._0,
+              xoffset) > -1 && (_U.cmp(_v32._0,
+              xoffset + canvas_width) < 1 && (_U.cmp(_v32._1,
+              yoffset) > -1 && _U.cmp(_v32._1,
+              yoffset + canvas_height) < 1));}
+         _E.Case($moduleName,
+         "between lines 226 and 227");
+      }();
+   });
+   var Path = F2(function (a,b) {
+      return {ctor: "Path"
+             ,_0: a
+             ,_1: b};
+   });
+   var createPath = F2(function (points,
+   canvas) {
+      return A2(Path,
+      points,
+      canvas.selectedLineStyle);
+   });
+   var Polygon = F4(function (a,
+   b,
+   c,
+   d) {
+      return {ctor: "Polygon"
+             ,_0: a
+             ,_1: b
+             ,_2: c
+             ,_3: d};
+   });
+   var Oval = F5(function (a,
+   b,
+   c,
+   d,
+   e) {
+      return {ctor: "Oval"
+             ,_0: a
+             ,_1: b
+             ,_2: c
+             ,_3: d
+             ,_4: e};
+   });
+   var createOval = F3(function (a,
+   b,
+   canvas) {
+      return A5(Oval,
+      a,
+      b,
+      canvas.selectedLineStyle,
+      canvas.selectedFill,
+      canvas.ragionStyle);
+   });
+   var Rect = F5(function (a,
+   b,
+   c,
+   d,
+   e) {
+      return {ctor: "Rect"
+             ,_0: a
+             ,_1: b
+             ,_2: c
+             ,_3: d
+             ,_4: e};
+   });
+   var createRect = F3(function (a,
+   b,
+   canvas) {
+      return A5(Rect,
+      a,
+      b,
+      canvas.selectedLineStyle,
+      canvas.selectedFill,
+      canvas.ragionStyle);
+   });
+   var Redo = {ctor: "Redo"};
+   var Undo = {ctor: "Undo"};
+   var Cancel = {ctor: "Cancel"};
+   var DoubleClick = {ctor: "DoubleClick"};
+   var doubleClickAction = function () {
+      var inCanvasDoubleClick = A3($Signal.keepWhen,
+      A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["<~"],
+      inCanvas,
+      xoffsetS),
+      yoffsetS),
+      $Mouse.position),
+      {ctor: "_Tuple0"},
+      doubleClick);
+      return A2($Signal.sampleOn,
+      inCanvasDoubleClick,
+      $Signal.constant(DoubleClick));
+   }();
+   var Click = function (a) {
+      return {ctor: "Click",_0: a};
+   };
+   var filteredMouseClicks = function () {
+      var clickAction = F3(function (_v36,
+      xoffset,
+      yoffset) {
+         return function () {
+            switch (_v36.ctor)
+            {case "_Tuple2":
+               return Click(A3(transformPosition,
+                 {ctor: "_Tuple2"
+                 ,_0: _v36._0
+                 ,_1: _v36._1},
+                 xoffset,
+                 yoffset));}
+            _E.Case($moduleName,
+            "on line 233, column 47 to 94");
+         }();
+      });
+      var inCanvasClicks = A3($Signal.keepWhen,
+      A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["<~"],
+      inCanvas,
+      xoffsetS),
+      yoffsetS),
+      $Mouse.position),
+      {ctor: "_Tuple0"},
+      $Mouse.clicks);
+      return A2($Signal._op["~"],
+      A2($Signal._op["~"],
+      A2($Signal._op["<~"],
+      clickAction,
+      A2($Signal.sampleOn,
+      inCanvasClicks,
+      $Mouse.position)),
+      xoffsetS),
+      yoffsetS);
+   }();
+   var NoAction = {ctor: "NoAction"};
+   var toolbox = $Graphics$Input.input(NoAction);
+   var Clear = {ctor: "Clear"};
+   var clearBtn = A3($Graphics$Input.button,
+   toolbox.handle,
+   Clear,
+   "Clear");
+   var Select = function (a) {
+      return {ctor: "Select"
+             ,_0: a};
+   };
+   var RectPen = {ctor: "RectPen"};
+   var rectBtn = A3($Graphics$Input.button,
+   toolbox.handle,
+   Select(RectPen),
+   "Rectangle");
+   var PolygonPen = {ctor: "PolygonPen"};
+   var OvalPen = {ctor: "OvalPen"};
+   var ovalBtn = A3($Graphics$Input.button,
+   toolbox.handle,
+   Select(OvalPen),
+   "Oval");
+   var LinePen = {ctor: "LinePen"};
+   var lineBtn = A3($Graphics$Input.button,
+   toolbox.handle,
+   Select(LinePen),
+   "Line");
+   var activeTool = function (selectedTool) {
+      return function () {
+         switch (selectedTool.ctor)
+         {case "LinePen":
+            return _L.fromArray([A2($Graphics$Element.color,
+                                $Color.red,
+                                lineBtn)
+                                ,ovalBtn
+                                ,rectBtn]);
+            case "OvalPen":
+            return _L.fromArray([lineBtn
+                                ,A2($Graphics$Element.color,
+                                $Color.red,
+                                ovalBtn)
+                                ,rectBtn]);
+            case "RectPen":
+            return _L.fromArray([lineBtn
+                                ,ovalBtn
+                                ,A2($Graphics$Element.color,
+                                $Color.red,
+                                rectBtn)]);}
+         _E.Case($moduleName,
+         "between lines 64 and 67");
+      }();
+   };
+   var sketchpad = F6(function (canvas,
+   mpos,
+   w,
+   h,
+   xoffset,
+   yoffset) {
+      return function () {
+         var newDrawing = canvas.isDrawing ? function () {
+            var _v41 = canvas.selectedTool;
+            switch (_v41.ctor)
+            {case "LinePen":
+               return _L.fromArray([A2(createPath,
+                 _L.append(canvas.tempPoints,
+                 _L.fromArray([mpos])),
+                 canvas)]);
+               case "OvalPen":
+               return _L.fromArray([A3(createOval,
+                 $List.head(canvas.tempPoints),
+                 mpos,
+                 canvas)]);
+               case "RectPen":
+               return _L.fromArray([A3(createRect,
+                 $List.head(canvas.tempPoints),
+                 mpos,
+                 canvas)]);}
+            _E.Case($moduleName,
+            "between lines 117 and 121");
+         }() : _L.fromArray([]);
          var _ = A2($Debug.watch,
          "canvas",
          canvas);
-         return A2($Graphics$Element.flow,
-         $Graphics$Element.outward,
+         return A3($Graphics$Element.container,
+         w,
+         h,
+         A2($Graphics$Element.topLeftAt,
+         $Graphics$Element.absolute(xoffset - 100),
+         $Graphics$Element.absolute(yoffset)))(A2($Graphics$Element.flow,
+         $Graphics$Element.down,
+         _L.fromArray([A2($Graphics$Element.flow,
+         $Graphics$Element.right,
          _L.fromArray([A2($Graphics$Element.flow,
                       $Graphics$Element.down,
-                      _L.fromArray([lineTool]))
-                      ,A3($Graphics$Element.container,
-                      canvas_width + xoffset,
-                      canvas_height,
-                      A2($Graphics$Element.topLeftAt,
-                      $Graphics$Element.absolute(xoffset),
-                      $Graphics$Element.absolute(0)))(A3($Graphics$Collage.collage,
+                      _L.append(activeTool(canvas.selectedTool),
+                      _L.fromArray([A2($Graphics$Element.spacer,
+                                   20,
+                                   20)
+                                   ,clearBtn])))
+                      ,A3($Graphics$Collage.collage,
                       canvas_width,
                       canvas_height,
                       _L.append(_L.fromArray([$Graphics$Collage.filled($Color.lightGray)(A2($Graphics$Collage.rect,
@@ -182,54 +431,406 @@ Elm.Main.make = function (_elm) {
                                              canvas_height))
                                              ,$Graphics$Collage.outlined($Graphics$Collage.solid($Color.black))(A2($Graphics$Collage.rect,
                                              canvas_width,
-                                             canvas_height))
-                                             ,drawPath(canvas)]),
-                      canvas.forms)))]));
+                                             canvas_height))]),
+                      A2($List.map,
+                      draw,
+                      _L.append(canvas.drawings,
+                      newDrawing))))
+                      ,A2($Graphics$Element.flow,
+                      $Graphics$Element.down,
+                      _L.fromArray([$Text.plainText("Undo: Ctrl-Z")
+                                   ,$Text.plainText("Redo: Ctrl-R")
+                                   ,A2($Graphics$Element.spacer,
+                                   10,
+                                   10)
+                                   ,$Text.plainText("Line: L")
+                                   ,$Text.plainText("Oval: O")
+                                   ,$Text.plainText("Rect: R")
+                                   ,A2($Graphics$Element.spacer,
+                                   10,
+                                   10)
+                                   ,showHints(canvas)]))]))])));
       }();
-   };
+   });
+   var processKey = F3(function (ctrl,
+   shift,
+   keys) {
+      return A2($List.any,
+      function (k) {
+         return _U.eq(k,27);
+      },
+      keys) ? Cancel : ctrl && (shift && A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("Z")));
+      },
+      keys)) || ctrl && A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("R")));
+      },
+      keys) ? Redo : ctrl && A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("Z")));
+      },
+      keys) ? Undo : A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("L")));
+      },
+      keys) ? Select(LinePen) : A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("O")));
+      },
+      keys) ? Select(OvalPen) : A2($List.any,
+      function (k) {
+         return _U.eq(k,
+         $Char.toCode(_U.chr("R")));
+      },
+      keys) ? Select(RectPen) : NoAction;
+   });
+   var allInput = $Signal.merges(_L.fromArray([toolbox.signal
+                                              ,A2($Signal._op["~"],
+                                              A2($Signal._op["~"],
+                                              A2($Signal._op["<~"],
+                                              processKey,
+                                              A2($Signal.merge,
+                                              $Keyboard.meta,
+                                              $Keyboard.ctrl)),
+                                              $Keyboard.shift),
+                                              $Keyboard.keysDown)
+                                              ,doubleClickAction
+                                              ,filteredMouseClicks]));
+   var processAction = F2(function (action,
+   canvas) {
+      return function () {
+         var _v42 = A2($Debug.watch,
+         "action",
+         action);
+         switch (_v42.ctor)
+         {case "Cancel":
+            return clearCurrentDrawing(canvas);
+            case "Clear":
+            return clearPreviousDrawing(clearCurrentDrawing(canvas));
+            case "Click":
+            return canvas.isDrawing ? !_U.eq(_v42._0,
+              $List.last(canvas.tempPoints)) ? function () {
+                 var _v45 = canvas.selectedTool;
+                 switch (_v45.ctor)
+                 {case "LinePen":
+                    return _U.replace([["tempPoints"
+                                       ,_L.append(canvas.tempPoints,
+                                       _L.fromArray([_v42._0]))]],
+                      canvas);
+                    case "OvalPen":
+                    return function () {
+                         var newDrawing = A3(createOval,
+                         $List.head(canvas.tempPoints),
+                         _v42._0,
+                         canvas);
+                         return _U.replace([["drawings"
+                                            ,_L.append(canvas.drawings,
+                                            _L.fromArray([newDrawing]))]
+                                           ,["tempPoints",_L.fromArray([])]
+                                           ,["isDrawing",false]
+                                           ,["history"
+                                            ,A2($History.add,
+                                            _L.append(canvas.drawings,
+                                            _L.fromArray([newDrawing])),
+                                            canvas.history)]],
+                         canvas);
+                      }();
+                    case "RectPen":
+                    return function () {
+                         var newDrawing = A3(createRect,
+                         $List.head(canvas.tempPoints),
+                         _v42._0,
+                         canvas);
+                         return _U.replace([["drawings"
+                                            ,_L.append(canvas.drawings,
+                                            _L.fromArray([newDrawing]))]
+                                           ,["tempPoints",_L.fromArray([])]
+                                           ,["isDrawing",false]
+                                           ,["history"
+                                            ,A2($History.add,
+                                            _L.append(canvas.drawings,
+                                            _L.fromArray([newDrawing])),
+                                            canvas.history)]],
+                         canvas);
+                      }();}
+                 _E.Case($moduleName,
+                 "between lines 172 and 188");
+              }() : canvas : _U.replace([["isDrawing"
+                                         ,true]
+                                        ,["tempPoints"
+                                         ,_L.fromArray([_v42._0])]],
+              canvas);
+            case "DoubleClick":
+            return canvas.isDrawing && _U.eq(canvas.selectedTool,
+              LinePen) ? function () {
+                 var newPath = A2(createPath,
+                 canvas.tempPoints,
+                 canvas);
+                 return _U.replace([["drawings"
+                                    ,_L.append(canvas.drawings,
+                                    _L.fromArray([newPath]))]
+                                   ,["tempPoints",_L.fromArray([])]
+                                   ,["isDrawing",false]
+                                   ,["history"
+                                    ,A2($History.add,
+                                    _L.append(canvas.drawings,
+                                    _L.fromArray([newPath])),
+                                    canvas.history)]],
+                 canvas);
+              }() : canvas;
+            case "NoAction": return canvas;
+            case "Redo":
+            return function () {
+                 var _v46 = $History.redo(canvas.history);
+                 switch (_v46.ctor)
+                 {case "Just":
+                    return function () {
+                         var _v48 = $History.value(_v46._0);
+                         switch (_v48.ctor)
+                         {case "Just":
+                            return _U.replace([["drawings"
+                                               ,_v48._0]
+                                              ,["history",_v46._0]],
+                              canvas);
+                            case "Nothing": return canvas;}
+                         _E.Case($moduleName,
+                         "between lines 213 and 215");
+                      }();
+                    case "Nothing": return canvas;}
+                 _E.Case($moduleName,
+                 "between lines 210 and 215");
+              }();
+            case "Select":
+            return !_U.eq(_v42._0,
+              canvas.selectedTool) ? _U.replace([["selectedTool"
+                                                 ,_v42._0]
+                                                ,["tempPoints",_L.fromArray([])]
+                                                ,["isDrawing",false]],
+              canvas) : canvas;
+            case "Undo":
+            return function () {
+                 var _v50 = $History.undo(canvas.history);
+                 switch (_v50.ctor)
+                 {case "Just":
+                    return function () {
+                         var _v52 = $History.value(_v50._0);
+                         switch (_v52.ctor)
+                         {case "Just":
+                            return _U.replace([["drawings"
+                                               ,_v52._0]
+                                              ,["history",_v50._0]],
+                              canvas);
+                            case "Nothing":
+                            return _U.replace([["drawings"
+                                               ,_L.fromArray([])]
+                                              ,["history",_v50._0]],
+                              canvas);}
+                         _E.Case($moduleName,
+                         "between lines 206 and 209");
+                      }();
+                    case "Nothing": return canvas;}
+                 _E.Case($moduleName,
+                 "between lines 203 and 209");
+              }();}
+         _E.Case($moduleName,
+         "between lines 159 and 215");
+      }();
+   });
+   var PathAndFill = {ctor: "PathAndFill"};
+   var FillOnly = {ctor: "FillOnly"};
+   var PathOnly = {ctor: "PathOnly"};
    var canvasState = {_: {}
-                     ,currentPath: _L.fromArray([])
-                     ,drawing: false
-                     ,forms: _L.fromArray([])
-                     ,freePoint: $Maybe.Nothing
-                     ,selectedTool: Nil};
-   var main = A2($Signal._op["<~"],
+                     ,drawings: _L.fromArray([])
+                     ,history: $History.infinite
+                     ,isDrawing: false
+                     ,ragionStyle: PathOnly
+                     ,selectedDrawingIndex: $Maybe.Nothing
+                     ,selectedFill: $Color.white
+                     ,selectedLineStyle: $Graphics$Collage.defaultLine
+                     ,selectedTool: LinePen
+                     ,tempPoints: _L.fromArray([])};
+   var main = A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["<~"],
    sketchpad,
    A3($Signal.foldp,
-   computeState,
+   processAction,
    canvasState,
-   allInput));
-   var CanvasState = F5(function (a,
+   allInput)),
+   A2($Signal._op["~"],
+   A2($Signal._op["~"],
+   A2($Signal._op["<~"],
+   transformPosition,
+   $Mouse.position),
+   xoffsetS),
+   yoffsetS)),
+   $Window.width),
+   $Window.height),
+   xoffsetS),
+   yoffsetS);
+   var CanvasState = F9(function (a,
    b,
    c,
    d,
-   e) {
+   e,
+   f,
+   g,
+   h,
+   i) {
       return {_: {}
-             ,currentPath: b
-             ,drawing: e
-             ,forms: a
-             ,freePoint: c
-             ,selectedTool: d};
+             ,drawings: a
+             ,history: i
+             ,isDrawing: h
+             ,ragionStyle: g
+             ,selectedDrawingIndex: b
+             ,selectedFill: f
+             ,selectedLineStyle: e
+             ,selectedTool: d
+             ,tempPoints: c};
    });
    _elm.Main.values = {_op: _op
                       ,CanvasState: CanvasState
                       ,canvasState: canvasState
-                      ,Line: Line
-                      ,Nil: Nil
-                      ,toolbox: toolbox
-                      ,xoffset: xoffset
+                      ,PathOnly: PathOnly
+                      ,FillOnly: FillOnly
+                      ,PathAndFill: PathAndFill
+                      ,LinePen: LinePen
+                      ,OvalPen: OvalPen
+                      ,PolygonPen: PolygonPen
+                      ,RectPen: RectPen
+                      ,Select: Select
+                      ,Clear: Clear
+                      ,NoAction: NoAction
+                      ,Click: Click
+                      ,DoubleClick: DoubleClick
+                      ,Cancel: Cancel
+                      ,Undo: Undo
+                      ,Redo: Redo
+                      ,Rect: Rect
+                      ,Oval: Oval
+                      ,Polygon: Polygon
+                      ,Path: Path
                       ,canvas_width: canvas_width
                       ,canvas_height: canvas_height
-                      ,lineTool: lineTool
-                      ,transformPos: transformPos
-                      ,drawPath: drawPath
+                      ,xoffsetS: xoffsetS
+                      ,yoffsetS: yoffsetS
+                      ,toolbox: toolbox
+                      ,lineBtn: lineBtn
+                      ,ovalBtn: ovalBtn
+                      ,rectBtn: rectBtn
+                      ,clearBtn: clearBtn
+                      ,activeTool: activeTool
+                      ,draw: draw
+                      ,showHints: showHints
+                      ,createPath: createPath
+                      ,createRect: createRect
+                      ,createOval: createOval
                       ,sketchpad: sketchpad
                       ,processKey: processKey
-                      ,updateTool: updateTool
-                      ,processMousePos: processMousePos
-                      ,processMousePress: processMousePress
-                      ,computeState: computeState
+                      ,clearCurrentDrawing: clearCurrentDrawing
+                      ,clearPreviousDrawing: clearPreviousDrawing
+                      ,processAction: processAction
+                      ,transformPosition: transformPosition
+                      ,inCanvas: inCanvas
+                      ,filteredMouseClicks: filteredMouseClicks
+                      ,doubleClick: doubleClick
+                      ,doubleClickAction: doubleClickAction
                       ,allInput: allInput
                       ,main: main};
    return _elm.Main.values;
+};Elm.History = Elm.History || {};
+Elm.History.make = function (_elm) {
+   "use strict";
+   _elm.History = _elm.History || {};
+   if (_elm.History.values)
+   return _elm.History.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   _A = _N.Array.make(_elm),
+   _E = _N.Error.make(_elm),
+   $moduleName = "History",
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm);
+   var value = function (h) {
+      return function () {
+         var _v0 = h.past;
+         switch (_v0.ctor)
+         {case "::":
+            return $Maybe.Just(_v0._0);
+            case "[]":
+            return $Maybe.Nothing;}
+         _E.Case($moduleName,
+         "between lines 24 and 26");
+      }();
+   };
+   var add = F2(function (x,h) {
+      return _U.replace([["past"
+                         ,A2($List._op["::"],x,h.past)]
+                        ,["future",_L.fromArray([])]],
+      h);
+   });
+   var redo = function (h) {
+      return function () {
+         var _v3 = h.future;
+         switch (_v3.ctor)
+         {case "::":
+            return $Maybe.Just(_U.replace([["past"
+                                           ,A2($List._op["::"],
+                                           _v3._0,
+                                           h.past)]
+                                          ,["future",_v3._1]],
+              h));
+            case "[]":
+            return $Maybe.Nothing;}
+         _E.Case($moduleName,
+         "between lines 14 and 16");
+      }();
+   };
+   var undo = function (h) {
+      return function () {
+         var _v6 = h.past;
+         switch (_v6.ctor)
+         {case "::":
+            return $Maybe.Just(_U.replace([["past"
+                                           ,_v6._1]
+                                          ,["future"
+                                           ,A2($List._op["::"],
+                                           _v6._0,
+                                           h.future)]],
+              h));
+            case "[]":
+            return $Maybe.Nothing;}
+         _E.Case($moduleName,
+         "between lines 8 and 10");
+      }();
+   };
+   var infinite = {_: {}
+                  ,future: _L.fromArray([])
+                  ,past: _L.fromArray([])};
+   var History = F2(function (a,
+   b) {
+      return {_: {}
+             ,future: b
+             ,past: a};
+   });
+   _elm.History.values = {_op: _op
+                         ,History: History
+                         ,infinite: infinite
+                         ,undo: undo
+                         ,redo: redo
+                         ,add: add
+                         ,value: value};
+   return _elm.History.values;
 };</script></head><body><script type="text/javascript">Elm.fullscreen(Elm.Main)</script><noscript></noscript></body></html>
